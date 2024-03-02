@@ -55,10 +55,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let mut file_hash = String::new();
-                print!("Enter file hash: ");
-                let _ = stdout().flush();
-                scan.read_line(&mut file_hash).unwrap();
-                let file_hash = file_hash.trim();
+        print!("Enter file hash: ");
+        let _ = stdout().flush();
+        scan.read_line(&mut file_hash).unwrap();
+        let file_hash = file_hash.trim();
 
         match choice {
             1 => {
@@ -84,10 +84,9 @@ async fn register_file(client: &mut MarketClient<tonic::transport::Channel>, fil
         user: Some(user.clone()),
     });
 
-    let response = client.register_file(request).await.unwrap();
-
-    dbg!(response);
-
+    client.register_file(request).await.unwrap();
+    println!("File registered");
+    
     Ok(())
 }
 
@@ -98,8 +97,12 @@ async fn check_holders(client: &mut MarketClient<tonic::transport::Channel>, fil
     });
 
     let response = client.check_holders(request).await.unwrap();
+    let holders = response.into_inner().holders;
 
-    dbg!(response);
+    println!("Holders:");
+    for holder in holders {
+        println!("User {} is charging {}", holder.name, holder.price);
+    }
 
     Ok(())
 }
