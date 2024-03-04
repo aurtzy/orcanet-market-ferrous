@@ -1,10 +1,5 @@
-use market::{CheckHoldersRequest, HoldersResponse, RegisterFileRequest, User};
-
-use market::market_client::MarketClient;
-use std::io::{stdin, stdout, Write};
-
 pub mod market {
-    tonic::include_proto!("market");
+    tonic::include_proto!("market"); // Path to proto file
 }
 
 #[tokio::main]

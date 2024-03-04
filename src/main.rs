@@ -123,7 +123,7 @@ impl Server {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let argv: Vec<String> = std::env::args().collect();
+    let _argv: Vec<String> = std::env::args().collect();
 
     let mut m = Server::new();
 
