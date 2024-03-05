@@ -1,10 +1,14 @@
+use std::io::{stdin, stdout, Write};
+use crate::market::market_client::MarketClient;
+use crate::market::{CheckHoldersRequest, RegisterFileRequest, User};
+
 pub mod market {
     tonic::include_proto!("market"); // Path to proto file
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut scan = stdin();
+    let scan = stdin();
     let mut client = MarketClient::connect("http://127.0.0.1:50051")
         .await
         .unwrap();
@@ -79,10 +83,16 @@ async fn register_file(client: &mut MarketClient<tonic::transport::Channel>, fil
         user: Some(user.clone()),
     });
 
-    client.register_file(request).await.unwrap();
-    println!("File registered");
-    
-    Ok(())
+    match client.register_file(request).await {
+        Ok(_) => {
+            println!("File registered");
+            Ok(())
+        },
+        Err(err) => {
+            println!("Failed to register file with error {}", err);
+            Err(Box::new(err))
+        }
+    }
 }
 
 
