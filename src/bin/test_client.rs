@@ -1,4 +1,6 @@
+use market::HoldersResponse;
 use std::io::{stdin, stdout, Write};
+
 use crate::market::market_client::MarketClient;
 use crate::market::{CheckHoldersRequest, RegisterFileRequest, User};
 
@@ -12,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = MarketClient::connect("http://127.0.0.1:50051")
         .await
         .unwrap();
-    
+
     let mut user = String::new();
     print!("Enter a username: ");
     let _ = stdout().flush();
@@ -41,12 +43,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("1. Register file");
         println!("2. Check holders");
         println!("3. Exit");
-        
+
         print!("Enter your choice: ");
-    
+
         let _ = stdout().flush();
         scan.read_line(&mut s).unwrap();
-    
+
         let choice: u32 = s.trim().parse().unwrap();
 
         if choice == 3 {
@@ -60,12 +62,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let file_hash = file_hash.trim();
 
         match choice {
-            1 => {
-                register_file(&mut client, file_hash, &user).await;
-            }
-            2 => {
-                check_holders(&mut client, file_hash).await;
-            }
+            1 => match register_file(&mut client, file_hash, &user).await {
+                Ok(_) => println!("File registered"),
+                Err(status) => println!("Failed to register with error {}", status),
+            },
+            2 => match check_holders(&mut client, file_hash).await {
+                Ok(response) => {
+                    println!("Holders:");
+                    for holder in &response.holders {
+                        println!("User {} is charging {}", holder.name, holder.price);
+                    }
+                }
+                Err(status) => println!("Failed to check holders with error {}", status),
+            },
             _ => {
                 println!("Invalid choice");
             }
@@ -77,37 +86,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn register_file(client: &mut MarketClient<tonic::transport::Channel>, file_hash: &str, user: &User) -> Result<(), Box<dyn std::error::Error>> {
+async fn register_file(
+    client: &mut MarketClient<tonic::transport::Channel>,
+    file_hash: &str,
+    user: &User,
+) -> Result<(), tonic::Status> {
     let request = tonic::Request::new(RegisterFileRequest {
         file_hash: file_hash.to_owned(),
         user: Some(user.clone()),
     });
 
-    match client.register_file(request).await {
-        Ok(_) => {
-            println!("File registered");
-            Ok(())
-        },
-        Err(err) => {
-            println!("Failed to register file with error {}", err);
-            Err(Box::new(err))
-        }
-    }
+    client
+        .register_file(request)
+        .await
+        .map(|response| response.into_inner())
 }
 
-
-async fn check_holders(client: &mut MarketClient<tonic::transport::Channel>, file_hash: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn check_holders(
+    client: &mut MarketClient<tonic::transport::Channel>,
+    file_hash: &str,
+) -> Result<HoldersResponse, tonic::Status> {
     let request = tonic::Request::new(CheckHoldersRequest {
         file_hash: file_hash.to_owned(),
     });
 
-    let response = client.check_holders(request).await.unwrap();
-    let holders = response.into_inner().holders;
+    let response = client.check_holders(request).await?;
 
-    println!("Holders:");
-    for holder in holders {
-        println!("User {} is charging {}", holder.name, holder.price);
-    }
-
-    Ok(())
+    Ok(response.into_inner())
 }
